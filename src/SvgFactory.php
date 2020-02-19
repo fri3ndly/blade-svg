@@ -99,10 +99,10 @@ class SvgFactory
         return trim(sprintf('%s %s', $this->config['class'], $class));
     }
 
-    public function getSvg($name)
+    public function getSvg($dirAndFilename)
     {
-        return $this->svgCache->get($name, function () use ($name) {
-            return $this->svgCache[$name] = trim($this->files->get(sprintf('%s/%s.svg', rtrim($this->svgPath()), str_replace('.', '/', $name))));
+        return $this->svgCache->get($dirAndFilename, function () use ($dirAndFilename) {
+            return $this->svgCache[$dirAndFilename] = trim($this->files->get(public_path($dirAndFilename)));
         });
     }
 }
