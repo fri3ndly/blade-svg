@@ -14,6 +14,9 @@ class Svg implements Htmlable
     private $factory;
     private $attrs = [];
 
+    protected $height;
+    protected $width;
+
     public function __construct($imageName, $renderMode, $factory, $attrs = [])
     {
         $this->imageName = $imageName;
@@ -52,12 +55,53 @@ class Svg implements Htmlable
         return $this;
     }
 
+    public function replaceWidthHeightWithViewbox()
+    {
+        $svg = $this->factory->getSvg($this->imageName);
+
+        $dom = new \DOMDocument();
+
+        @$dom->loadHTML($svg);
+
+        $el = $dom->getElementsByTagName('svg')->item(0);
+
+        if ($el->hasAttributes()) {
+            foreach ($el->attributes as $attr) {
+                $name = $attr->nodeName;
+                $value = $attr->nodeValue;
+
+                if ($name == 'width')
+                    $this->width = $value;
+
+                if ($name == 'height')
+                    $this->height = $value;
+
+                if ($name == 'viewBox')
+                    $this->viewBoxExists = true;
+            }
+
+            if ($this->height && $this->width) {
+                $el->removeAttribute('width');
+                $el->removeAttribute('height');
+
+                // Add viewBox Attribute
+                $el->setAttribute('viewBox', '0 0 ' . $this->width . ' ' . $this->height);
+            }
+        }
+
+        //dd($dom->saveHTML($el));
+
+        return $dom->saveHTML($el);
+    }
+
     public function renderInline()
     {
+        $alteredSvg = $this->replaceWidthHeightWithViewbox();
+
         return str_replace(
             '<svg',
             sprintf('<svg%s', $this->renderAttributes()),
-            $this->factory->getSvg($this->imageName)
+            $alteredSvg
         );
     }
 
@@ -76,11 +120,11 @@ class Svg implements Htmlable
             return '';
         }
 
-        return ' '.collect($this->attrs)->map(function ($value, $attr) {
-            if (is_int($attr)) {
-                return $value;
-            }
-            return sprintf('%s="%s"', $attr, $value);
-        })->implode(' ');
+        return ' ' . collect($this->attrs)->map(function ($value, $attr) {
+                if (is_int($attr)) {
+                    return $value;
+                }
+                return sprintf('%s="%s"', $attr, $value);
+            })->implode(' ');
     }
 }
